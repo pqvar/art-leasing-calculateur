@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Calculateur interactif de défiscalisation par l'Art Leasing. Comparez l'optimisation fiscale entre dividendes classiques et leasing d'œuvres d'art." />
+  <meta name="keywords" content="art leasing, défiscalisation, optimisation fiscale, dividendes, œuvre d'art, IS, calculateur" />
+  <meta name="author" content="Art Leasing Conseil" />
+  <title>Calculateur Art Leasing - Optimisation Fiscale</title>
+  <!-- 
+    Version finale optimisée - Corrections appliquées :
+    1. Code simplifié par ChatGPT (907 lignes vs 1700+)
+    2. Fonctions helper pour éviter les erreurs (setText, setHTML, nonNeg)
+    3. Tous les textes rendus dynamiques (ajout de 6 IDs : extract2_ratioTextAL, extract2_ratioTextDiv, 
+       extract2_summaryAL, extract2_summaryDiv, extract2_infoAL, extract2_infoDiv)
+    4. Protection mathématique contre valeurs négatives et infinies
+  -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; padding: 20px; min-height: 100vh; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; }
+    h1 { font-size: 2.5em; margin-bottom: 10px; }
+    .subtitle { font-size: 1.2em; opacity: 0.9; }
+    .controls { margin-top: 30px; }
+    .controls > div { background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; max-width: 900px; margin: 0 auto; }
+    .controls input { width: 100%; padding: 12px; font-size: 1.1em; border: 2px solid white; border-radius: 8px; font-weight: bold; }
+    .controls label { display: block; margin-bottom: 8px; font-weight: 600; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+    .info-box { margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.3); border-radius: 8px; font-size: 0.9em; }
+    .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
+    .tab { flex: 1; min-width: 150px; padding: 20px 10px; text-align: center; cursor: pointer; font-weight: 600; transition: all 0.3s; border-bottom: 3px solid transparent; font-size: 0.9em; }
+    .tab:hover { background: #e9ecef; }
+    .tab.active { background: white; border-bottom: 3px solid #667eea; color: #667eea; }
+    .content { padding: 40px; }
+    .tab-content { display: none; animation: fadeIn 0.5s; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .comparison-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
+    .card { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transition: transform 0.3s; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
+    .card.winner { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); border: 3px solid #4CAF50; }
+    .card h3 { color: #333; margin-bottom: 20px; font-size: 1.5em; }
+    .big-number { font-size: 3em; font-weight: bold; color: #667eea; margin: 20px 0; }
+    .card.winner .big-number { color: #2e7d32; }
+    .stat-row { display: flex; justify-content: space-between; padding: 15px; margin: 10px 0; background: rgba(255,255,255,0.5); border-radius: 8px; }
+    .stat-label { font-weight: 600; }
+    .stat-value { font-weight: bold; color: #667eea; }
+    .gain-badge { display: inline-block; background: #4CAF50; color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; margin: 20px 0; }
+    .chart-container { position: relative; height: 400px; margin: 30px 0; }
+    .flow-diagram { margin: 40px 0; }
+    .flow-step { display: flex; align-items: center; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; transition: all 0.3s; }
+    .flow-step:hover { background: #e9ecef; transform: translateX(10px); }
+    .flow-icon { width: 60px; height: 60px; background: #667eea; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; font-weight: bold; margin-right: 20px; flex-shrink: 0; }
+    .flow-content { flex: 1; }
+    .flow-amount { font-size: 1.5em; font-weight: bold; color: #667eea; }
+    .flow-amount.negative { color: #f44336; }
+    .flow-amount.positive { color: #4CAF50; }
+    .arrow { text-align: center; font-size: 2em; color: #667eea; margin: 10px 0; }
+    .highlight-box { background: #fff3cd; border-left: 5px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 5px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0; }
+    .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; text-align: center; }
+    .summary-card h4 { font-size: 0.9em; margin-bottom: 10px; opacity: 0.9; }
+    .summary-card .value { font-size: 2em; font-weight: bold; }
+    button.cta { background: #4CAF50; color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 25px; cursor: pointer; transition: all 0.3s; margin: 20px 0; }
+    button.cta:hover { background: #45a049; transform: scale(1.05); }
+    button { background: white; color: #667eea; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+    button:hover { background: #f0f0f0; }
+    .warning-box { background: #ffebee; border-left: 5px solid #f44336; padding: 20px; margin: 20px 0; border-radius: 5px; }
+    .success-box { background: #e8f5e9; border-left: 5px solid #4CAF50; padding: 20px; margin: 20px 0; border-radius: 5px; }
+    .info-banner { background: #e3f2fd; border-left: 5px solid #2196F3; padding: 20px; margin: 20px 0; border-radius: 5px; }
+
+    @media (max-width: 768px) {
+      .comparison-cards, .summary-grid { grid-template-columns: 1fr; }
+      .grid-2, .grid-5 { grid-template-columns: 1fr; }
+      h1 { font-size: 1.8em; }
+      .tab { font-size: 0.8em; padding: 15px 5px; }
+    }
+
+    /* Impression */
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; border-radius: 0; }
+      .controls, .tabs, button, .tab, input { display: none !important; }
+      header { background: white !important; color: #333 !important; border-bottom: 3px solid #667eea; page-break-after: avoid; }
+      h1 { color: #667eea !important; }
+      .subtitle { color: #666 !important; }
+      .tab-content { display: block !important; page-break-before: always; }
+      .tab-content:first-child { page-break-before: avoid; }
+      .card { border: 2px solid #ddd; box-shadow: none; page-break-inside: avoid; }
+      .card.winner { border: 3px solid #4CAF50; }
+      .summary-card { border: 2px solid #667eea; }
+      .comparison-cards, .summary-grid, .highlight-box, .success-box, .info-banner, table { page-break-inside: avoid; }
+      .chart-container { display: none !important; }
+      table { border-collapse: collapse; width: 100%; }
+      @page { margin: 2cm; }
+    }
+
+    @media screen { .tab-content { display: none; } .tab-content.active { display: block; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎨 Défiscalisation par l'Art Leasing</h1>
+      <p class="subtitle">Analyse exhaustive : Double comparaison</p>
+
+      <div class="controls">
+        <div>
+          <div class="grid-2">
+            <div>
+              <label>Résultat annuel de la société :</label>
+              <input type="number" id="resultatAnnuel" step="1000" min="0" placeholder="Ex: 30000" oninput="updateCalculations()" />
+            </div>
+            <div>
+              <label>Valeur de l'œuvre à la revente :</label>
+              <input type="number" id="valeurOeuvre" step="1000" min="0" placeholder="Ex: 30000" oninput="updateCalculations()" />
+            </div>
+          </div>
+          <div class="grid-5">
+            <div>
+              <label style="font-size: 0.9em;">Loyer mensuel (€) :</label>
+              <input type="number" id="loyerMensuel" step="50" min="0" placeholder="Ex: 1600" oninput="updateCalculations()" />
+            </div>
+            <div>
+              <label style="font-size: 0.9em;">Durée (mois) :</label>
+              <input type="number" id="dureeMois" value="24" step="1" min="12" max="60" oninput="updateCalculations()" />
+            </div>
+            <div>
+              <label style="font-size: 0.9em;">Apport initial (€) :</label>
+              <input type="number" id="apportInitial" value="0" step="500" min="0" oninput="updateCalculations()" />
+            </div>
+            <div>
+              <label style="font-size: 0.9em;">Taux IS (%) :</label>
+              <input type="number" id="tauxIS" value="25" step="0.1" min="0" max="100" oninput="updateCalculations()" />
+            </div>
+            <div>
+              <label style="font-size: 0.9em;">Taxe div. (%) :</label>
+              <input type="number" id="tauxDividendes" value="30" step="0.1" min="0" max="100" oninput="updateCalculations()" />
+            </div>
+          </div>
+          <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border: 2px solid #ffc107;">
+            <label style="display: flex; align-items: center; cursor: pointer; font-weight: bold;">
+              <input type="checkbox" id="distribuerSurplus" onchange="updateCalculations()" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;" />
+              <span>💰 Distribuer le surplus de résultat en dividendes</span>
+            </label>
+            <p style="font-size: 0.9em; margin: 10px 0 0 30px; color: #856404; line-height: 1.5;">
+              <strong>Note :</strong> Cette option ne s'applique que si votre résultat réel <strong>dépasse</strong> le résultat nécessaire pour égaler l'Art Leasing.<br />
+              <em>Par exemple, si le résultat nécessaire est de 90.300 € mais que votre résultat réel est de 100.000 €, vous aurez un surplus de 9.700 €.</em>
+            </p>
+          </div>
+          <div class="info-box">
+            💡 <strong>Loyer mensuel :</strong> Entrez le montant exact de la mensualité de leasing<br />
+            <span id="chargesInfo" style="font-weight: bold; color: #2e7d32;"></span>
+          </div>
+          <button onclick="resetDefaults()">🔄 Réinitialiser aux valeurs par défaut</button>
+          <button onclick="downloadPDF()" style="background: #4CAF50; color: white; margin-left: 10px;">📥 Télécharger le rapport PDF</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab(0)">📊 Vue Globale</div>
+      <div class="tab" onclick="showTab(1)">🎯 Résultat Nécessaire</div>
+      <div class="tab" onclick="showTab(2)">💰 Résultat Identique</div>
+      <div class="tab" onclick="showTab(3)">🎨 Art Leasing</div>
+      <div class="tab" onclick="showTab(4)">💼 Dividendes</div>
+      <div class="tab" onclick="showTab(5)">📈 Graphiques</div>
+    </div>
+
+    <div class="content">
+      <!-- TAB 0: Vue Globale -->
+      <div class="tab-content active">
+        <h2 style="text-align: center; margin-bottom: 30px;">🔍 Analyse Exhaustive : Deux Angles de Comparaison</h2>
+
+        <div class="info-banner">
+          <h3>📌 Les deux visions complémentaires</h3>
+          <p style="line-height: 1.8;">
+            Cette analyse présente <strong>deux façons de comparer</strong> l'Art Leasing et les Dividendes :<br /><br />
+            <strong>1️⃣ Même objectif net :</strong> Combien de résultat faut-il pour obtenir le même montant net ?<br />
+            <strong>2️⃣ Même résultat de départ :</strong> Avec le même résultat initial, qui récupère le plus ?
+          </p>
+        </div>
+
+        <h3 style="text-align: center; margin: 40px 0 20px 0;">1️⃣ COMPARAISON : RÉSULTAT NÉCESSAIRE</h3>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+          <strong>Question :</strong> Pour obtenir <span id="vue1_objectif" style="color: #4CAF50; font-weight: bold;">37.987 €</span> nets, quel résultat faut-il générer ?
+        </p>
+
+        <div class="comparison-cards">
+          <div class="card winner">
+            <h3>🎨 Art Leasing</h3>
+            <div class="big-number" id="vue1_resultatAL">60.000 €</div>
+            <p style="text-align: center; color: #2e7d32; font-weight: bold;">Résultat nécessaire</p>
+            <div class="stat-row">
+              <span class="stat-label">Pour obtenir nets</span>
+              <span class="stat-value" id="vue1_netAL" style="color: #4CAF50;">37.987 €</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3><span id="vue1_divLabel">💰 Dividendes</span></h3>
+            <div class="big-number" id="vue1_resultatDiv">90.300 €</div>
+            <p style="text-align: center; color: #666;">Résultat nécessaire</p>
+            <div class="stat-row">
+              <span class="stat-label"><span id="vue1_divStatus">Pour obtenir nets</span></span>
+              <span class="stat-value" id="vue1_netDiv" style="color: #4CAF50;">37.987 €</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="success-box">
+          <p style="font-size: 1.2em; text-align: center;"><strong>💰 Économie de résultat : <span id="vue1_economie" style="color: #4CAF50;">30.300 €</span> (<span id="vue1_pourcent">-33,6%</span>)</strong></p>
+        </div>
+        
+        <div class="info-box" id="surplus_info" style="display: none; margin-top: 20px; background: #fff9e6; border: 2px solid #ffc107;">
+          <h4 style="margin-top: 0; color: #f57c00;">📊 Gestion du surplus de résultat</h4>
+          <p style="line-height: 1.8;">
+            Votre résultat réel (<strong><span id="surplus_resultatReel">60.000 €</span></strong>) dépasse le résultat nécessaire (<strong><span id="surplus_resultatNecessaire">90.300 €</span></strong>).<br />
+            <strong>Surplus disponible : <span id="surplus_montant" style="color: #f57c00; font-size: 1.2em;">0 €</span></strong>
+          </p>
+          <div id="surplus_detail" style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; line-height: 1.8;" id="surplus_text">
+              <!-- Texte dynamique selon l'option -->
+            </p>
+          </div>
+        </div>
+        
+        <div class="warning-box" id="no_surplus_info" style="display: none; margin-top: 20px; background: #e3f2fd; border: 2px solid #2196F3;">
+          <h4 style="margin-top: 0; color: #1976d2;">ℹ️ Information sur le surplus</h4>
+          <p style="line-height: 1.8;">
+            Votre résultat réel (<strong><span id="no_surplus_resultatReel">60.000 €</span></strong>) est inférieur au résultat nécessaire (<strong><span id="no_surplus_resultatNecessaire">90.300 €</span></strong>).<br />
+            <strong>Il n'y a pas de surplus à gérer.</strong><br /><br />
+            Pour avoir un surplus, augmentez le "Résultat annuel de la société" à environ <strong><span id="no_surplus_minimum">66.178 €</span></strong> ou plus.
+          </p>
+        </div>
+
+        <hr style="margin: 50px 0; border: none; border-top: 2px dashed #ccc;" />
+
+        <h3 style="text-align: center; margin: 40px 0 20px 0;">2️⃣ COMPARAISON : RÉSULTAT IDENTIQUE</h3>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+          <strong>Question :</strong> Avec <span id="vue2_resultat" style="color: #667eea; font-weight: bold;">60.000 €</span> de résultat, qui récupère le plus ?
+        </p>
+
+        <div class="comparison-cards">
+          <div class="card winner">
+            <h3>🎨 Art Leasing</h3>
+            <div class="big-number" id="vue2_netAL">37.987 €</div>
+            <p style="text-align: center; color: #2e7d32; font-weight: bold;">Net dans la poche</p>
+            <div class="stat-row">
+              <span class="stat-label">Résultat de départ</span>
+              <span class="stat-value" id="vue2_resultatAL">60.000 €</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3><span id="vue2_divLabel">💰 Dividendes</span></h3>
+            <div class="big-number" id="vue2_netDiv">31.500 €</div>
+            <p style="text-align: center; color: #666;"><span id="vue2_divStatus">Net dans la poche</span></p>
+            <div class="stat-row">
+              <span class="stat-label">Résultat de départ</span>
+              <span class="stat-value" id="vue2_resultatDiv">60.000 €</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="success-box">
+          <p style="font-size: 1.2em; text-align: center;"><strong>🎁 Gain net supplémentaire : <span id="vue2_gain" style="color: #4CAF50;">+6.487 €</span> (<span id="vue2_pourcent">+20,6%</span>)</strong></p>
+        </div>
+
+        <div class="highlight-box" style="margin-top: 40px;">
+          <h3>🎯 Synthèse des deux analyses</h3>
+          <table style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+            <tr style="background: #f5f5f5;">
+              <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Angle d'analyse</th>
+              <th style="padding: 15px; text-align: center; border: 1px solid #ddd;">Art Leasing</th>
+              <th style="padding: 15px; text-align: center; border: 1px solid #ddd;">Dividendes</th>
+              <th style="padding: 15px; text-align: center; border: 1px solid #ddd;">Avantage</th>
+            </tr>
+            <tr>
+              <td style="padding: 15px; border: 1px solid #ddd;"><strong>Résultat pour obtenir <span id="synth_net">37.987 €</span> nets</strong></td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #ddd; background: #e8f5e9;" id="synth_res1AL"><strong>60.000 €</strong></td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #ddd;" id="synth_res1Div">90.300 €</td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #ddd; color: #4CAF50;" id="synth_eco1"><strong>-30.300 €</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 15px; border: 1px solid #ddd;"><strong>Net obtenu avec <span id="synth_res">60.000 €</span> de résultat</strong></td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #ddd; background: #e8f5e9;" id="synth_net2AL"><strong>37.987 €</strong></td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #ddd;" id="synth_net2Div">31.500 €</td>
+              <td style="padding: 15px; text-align: center; border: 1px solid #ddd; color: #4CAF50;" id="synth_gain2"><strong>+6.487 €</strong></td>
+            </tr>
+          </table>
+        </div>
+
+        <hr style="margin: 50px 0; border: none; border-top: 2px dashed #ccc;" />
+
+        <h3 style="text-align: center; margin: 40px 0 20px 0;">💎 COÛT RÉEL D'EXTRACTION DE VALEUR</h3>
+        <p style="text-align: center; color: #666; font-size: 1.2em; margin-bottom: 30px;">
+          <strong>Question centrale :</strong> Pour extraire environ <span style="color: #4CAF50; font-weight: bold;" id="valeur_cible">26.647 €</span> de valeur nette,<br />
+          quel est le coût en % de la somme extraite ?
+        </p>
+
+        <div class="comparison-cards">
+          <div class="card winner">
+            <h3>🎨 Art Leasing</h3>
+            <div style="text-align: center; margin: 20px 0;">
+              <div style="font-size: 1em; color: #666;">Valeur nette extraite</div>
+              <div class="big-number" id="extract2_valeurAL" style="font-size: 2.5em; color: #4CAF50;">26.647 €</div>
+            </div>
+            <hr style="margin: 15px 0;" />
+            <p style="text-align: center; font-weight: bold; margin: 10px 0; color: #f44336;">COÛTS de l'extraction :</p>
+            <div class="stat-row"><span class="stat-label">Surcoût de financement</span><span class="stat-value" id="extract2_surcout" style="color: #f44336;">8.400 €</span></div>
+            <div style="padding: 5px 15px; font-size: 0.85em; color: #666; background: #f5f5f5; border-radius: 5px; margin: 5px 0;"><span id="extract2_surcoutDetail">(38.400 € loyers + 0 € apport) - 30.000 € valeur = 8.400 €</span></div>
+            <div class="stat-row"><span class="stat-label">Rachat œuvre (5%)</span><span class="stat-value" id="extract2_rachat" style="color: #f44336;">1.500 €</span></div>
+            <div class="stat-row"><span class="stat-label">Taxe plus-value (6,5%)</span><span class="stat-value" id="extract2_taxePV" style="color: #f44336;">1.853 €</span></div>
+            <div class="stat-row" style="background: #ffebee; border: 2px solid #f44336; margin-top: 15px;"><span class="stat-label"><strong>COÛT TOTAL</strong></span><span class="stat-value" id="extract2_coutTotalAL" style="color: #f44336; font-size: 1.4em;"><strong>11.753 €</strong></span></div>
+            <div class="stat-row" style="background: #e8f5e9; border: 2px solid #4CAF50; margin-top: 10px;"><span class="stat-label"><strong>RATIO COÛT / EXTRAIT</strong></span><span class="stat-value" id="extract2_ratioAL" style="color: #4CAF50; font-size: 1.4em;"><strong>44,1%</strong></span></div>
+            <p style="text-align: center; margin-top: 15px; color: #4CAF50; font-weight: bold; font-size: 1.1em;">Le coût représente <span id="extract2_ratioTextAL">44,1%</span> de la valeur extraite</p>
+          </div>
+
+          <div class="card">
+            <h3>💰 Dividendes</h3>
+            <div style="text-align: center; margin: 20px 0;">
+              <div style="font-size: 1em; color: #666;">Valeur nette extraite (identique)</div>
+              <div class="big-number" id="extract2_valeurDiv" style="font-size: 2.5em; color: #4CAF50;">26.647 €</div>
+            </div>
+            <div class="stat-row" style="background: #fff3cd; border: 2px solid #ff9800;"><span class="stat-label">Résultat nécessaire</span><span class="stat-value" id="extract2_resultatDiv" style="color: #ff9800; font-weight: bold;">50.281 €</span></div>
+            <hr style="margin: 15px 0;" />
+            <p style="text-align: center; font-weight: bold; margin: 10px 0; color: #f44336;">COÛTS de l'extraction :</p>
+            <div class="stat-row"><span class="stat-label">Impôt IS (25%)</span><span class="stat-value" id="extract2_isDiv" style="color: #f44336;">12.570 €</span></div>
+            <div class="stat-row"><span class="stat-label">Flat tax (30%)</span><span class="stat-value" id="extract2_flatTax" style="color: #f44336;">11.064 €</span></div>
+            <div style="padding: 60px 0;"></div>
+            <div class="stat-row" style="background: #ffebee; border: 2px solid #f44336; margin-top: 15px;"><span class="stat-label"><strong>COÛT TOTAL</strong></span><span class="stat-value" id="extract2_coutTotalDiv" style="color: #f44336; font-size: 1.4em;"><strong>23.634 €</strong></span></div>
+            <div class="stat-row" style="background: #ffebee; border: 2px solid #f44336; margin-top: 10px;"><span class="stat-label"><strong>RATIO COÛT / EXTRAIT</strong></span><span class="stat-value" id="extract2_ratioDiv" style="color: #f44336; font-size: 1.4em;"><strong>88,7%</strong></span></div>
+            <p style="text-align: center; margin-top: 15px; color: #f44336; font-weight: bold; font-size: 1.1em;">Le coût représente <span id="extract2_ratioTextDiv">88,7%</span> de la valeur extraite</p>
+          </div>
+        </div>
+
+        <div class="success-box">
+          <h3>🎯 Démonstration : L'Art Leasing est 2X plus efficace</h3>
+          <p style="font-size: 1.2em; line-height: 2;"><strong>Pour extraire <span id="extract2_objectif">26.647 €</span> de valeur nette :</strong></p>
+          <table style="width: 100%; margin: 20px 0; border-collapse: collapse; font-size: 1.1em;">
+            <tr style="background: #f5f5f5;">
+              <th style="padding: 15px; border: 2px solid #ddd;"></th>
+              <th style="padding: 15px; text-align: center; border: 2px solid #ddd;">🎨 Art Leasing</th>
+              <th style="padding: 15px; text-align: center; border: 2px solid #ddd;">💰 Dividendes</th>
+            </tr>
+            <tr>
+              <td style="padding: 15px; border: 2px solid #ddd;"><strong>Résultat nécessaire</strong></td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd; background: #e8f5e9;" id="tab_res_al">60.000 €</td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd;" id="tab_res_div">50.281 €</td>
+            </tr>
+            <tr>
+              <td style="padding: 15px; border: 2px solid #ddd;"><strong>Coût d'extraction</strong></td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd; background: #e8f5e9;" id="tab_cout_al">11.753 €</td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd;" id="tab_cout_div">23.634 €</td>
+            </tr>
+            <tr>
+              <td style="padding: 15px; border: 2px solid #ddd;"><strong>Valeur extraite</strong></td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd; background: #e8f5e9;" id="tab_val_al">26.647 €</td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd;" id="tab_val_div">26.647 €</td>
+            </tr>
+            <tr style="background: #fff3cd;">
+              <td style="padding: 15px; border: 2px solid #ddd;"><strong>RATIO (Coût / Extrait)</strong></td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd; background: #e8f5e9; font-size: 1.3em;" id="tab_ratio_al"><strong style="color: #4CAF50;">44,1%</strong></td>
+              <td style="padding: 15px; text-align: center; border: 2px solid #ddd; font-size: 1.3em;" id="tab_ratio_div"><strong style="color: #f44336;">88,7%</strong></td>
+            </tr>
+          </table>
+          <div style="background: white; padding: 20px; border-radius: 10px; margin-top: 20px; border: 3px solid #4CAF50;">
+            <p style="font-size: 1.3em; text-align: center; margin: 0;"><strong style="color: #4CAF50;">✅ L'Art Leasing coûte <span id="extract2_summaryAL">44%</span> de la somme extraite</strong><br /><strong style="color: #f44336;">❌ Les dividendes coûtent <span id="extract2_summaryDiv">89%</span> de la somme extraite</strong></p>
+            <p style="font-size: 1.5em; text-align: center; margin: 20px 0 0 0; color: #4CAF50;"><strong>🎯 L'Art Leasing est <span id="extract2_fois">2,0x</span> plus efficace !</strong></p>
+          </div>
+        </div>
+
+        <div class="info-banner">
+          <h3>💡 Pourquoi cette différence ?</h3>
+          <p style="line-height: 1.8; font-size: 1.05em;">
+            <strong>🎨 Art Leasing :</strong><br />• Le surcoût de financement (<span id="info_surcout">8.400 €</span>) est partiellement compensé par les économies d'IS sur le reste du résultat<br />• Les charges de leasing sont déductibles, réduisant l'IS global de la société<br />• La taxation à la sortie est favorable (5% + 6,5% = 11,5% vs 47,5% en dividendes)<br />• <strong>Au final : <span id="extract2_infoAL">44%</span> de coût pour extraire de la valeur</strong><br /><br />
+            <strong>💰 Dividendes :</strong><br />• Double taxation immédiate : 25% d'IS puis 30% de flat tax<br />• Aucune optimisation possible<br />• Taxation totale de 47,5% sur chaque euro distribué<br />• <strong>Au final : <span id="extract2_infoDiv">89%</span> de coût pour extraire de la valeur</strong><br /><br />
+            <strong>📊 Résultat :</strong> Pour chaque euro extrait, l'Art Leasing économise <span id="info_economie" style="color: #4CAF50; font-weight: bold;">0,45 €</span> de coût par rapport aux dividendes classiques !
+          </p>
+        </div>
+      </div>
+
+      <!-- TAB 1: Résultat Nécessaire -->
+      <div class="tab-content">
+        <h2 style="text-align: center; margin-bottom: 30px;">🎯 Comparaison 1 : Résultat Nécessaire</h2>
+        <p style="text-align: center; color: #666; font-size: 1.2em; margin-bottom: 40px;">Pour obtenir <strong><span id="rn_objectif" style="color: #4CAF50;">37.987 €</span> nets</strong> dans la poche du dirigeant</p>
+        <div class="comparison-cards">
+          <div class="card winner">
+            <h3>🎨 Art Leasing</h3>
+            <div class="big-number" id="rn_resultatAL">60.000 €</div>
+            <p style="text-align: center; color: #2e7d32; font-weight: bold;">Résultat nécessaire</p>
+            <div class="stat-row"><span class="stat-label">Charges déductibles</span><span class="stat-value" id="rn_chargesAL" style="color: #f44336;">- 38.400 €</span></div>
+            <div class="stat-row"><span class="stat-label">Impôts totaux</span><span class="stat-value" id="rn_impotsAL" style="color: #f44336;">- 12.113 €</span></div>
+            <div class="stat-row"><span class="stat-label">Net final</span><span class="stat-value" id="rn_netAL" style="color: #4CAF50;">37.987 €</span></div>
+          </div>
+          <div class="card">
+            <h3>💰 Dividendes</h3>
+            <div class="big-number" id="rn_resultatDiv">90.300 €</div>
+            <p style="text-align: center; color: #666;">Résultat nécessaire</p>
+            <div class="stat-row"><span class="stat-label">Aucune charge</span><span class="stat-value">0 €</span></div>
+            <div class="stat-row"><span class="stat-label">Impôts totaux</span><span class="stat-value" id="rn_impotsDiv" style="color: #f44336;">- 42.856 €</span></div>
+            <div class="stat-row"><span class="stat-label">Net final</span><span class="stat-value" id="rn_netDiv" style="color: #4CAF50;">37.987 €</span></div>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-card"><h4>ÉCONOMIE DE RÉSULTAT</h4><div class="value" id="rn_economieResultat">30.300 €</div></div>
+          <div class="summary-card"><h4>ÉCONOMIE D'IMPÔTS</h4><div class="value" id="rn_economieImpots">30.743 €</div></div>
+          <div class="summary-card"><h4>EFFICACITÉ</h4><div class="value" id="rn_efficacite">-33,6%</div></div>
+        </div>
+        <div class="success-box">
+          <h3>💡 Interprétation</h3>
+          <p style="font-size: 1.1em; line-height: 1.8;">Avec l'Art Leasing, il suffit de <strong id="rn_res1">60.000 €</strong> de résultat pour mettre <strong id="rn_obj1">37.987 €</strong> nets dans la poche.<br /><br />Avec les dividendes classiques, il faudrait générer <strong id="rn_res2">90.300 €</strong> de résultat pour obtenir le même montant net.<br /><br /><strong style="color: #4CAF50; font-size: 1.2em;">➜ L'Art Leasing permet d'économiser <span id="rn_eco">30.300 €</span> de résultat brut !</strong></p>
+        </div>
+      </div>
+
+      <!-- TAB 2: Résultat Identique -->
+      <div class="tab-content">
+        <h2 style="text-align: center; margin-bottom: 30px;">💰 Comparaison 2 : Résultat Identique</h2>
+        <p style="text-align: center; color: #666; font-size: 1.2em; margin-bottom: 40px;">Avec <strong><span id="ri_resultat" style="color: #667eea;">60.000 €</span></strong> de résultat (2 ans), qui récupère le plus ?</p>
+        <div class="comparison-cards">
+          <div class="card winner">
+            <h3>🎨 Art Leasing</h3>
+            <div class="big-number" id="ri_netAL">37.987 €</div>
+            <p style="text-align: center; color: #2e7d32; font-weight: bold;">Net dans la poche</p>
+            <div class="stat-row"><span class="stat-label">Résultat initial</span><span class="stat-value" id="ri_resAL">60.000 €</span></div>
+            <div class="stat-row"><span class="stat-label">Impôt IS</span><span class="stat-value" id="ri_isAL" style="color: #f44336;">- 5.400 €</span></div>
+            <div class="stat-row"><span class="stat-label">Taxe dividendes + PV</span><span class="stat-value" id="ri_taxesAL" style="color: #f44336;">- 6.713 €</span></div>
+            <div class="stat-row"><span class="stat-label">Total impôts</span><span class="stat-value" id="ri_totImpAL" style="color: #f44336;">12.113 €</span></div>
+            <div class="gain-badge" id="ri_badge">✨ GAIN : +6.487 € (+20,6%)</div>
+          </div>
+          <div class="card">
+            <h3>💰 Dividendes</h3>
+            <div class="big-number" id="ri_netDiv">31.500 €</div>
+            <p style="text-align: center; color: #666;">Net dans la poche</p>
+            <div class="stat-row"><span class="stat-label">Résultat initial</span><span class="stat-value" id="ri_resDiv">60.000 €</span></div>
+            <div class="stat-row"><span class="stat-label">Impôt IS (25%)</span><span class="stat-value" id="ri_isDiv" style="color: #f44336;">- 15.000 €</span></div>
+            <div class="stat-row"><span class="stat-label">Taxe dividendes (30%)</span><span class="stat-value" id="ri_taxesDiv" style="color: #f44336;">- 13.500 €</span></div>
+            <div class="stat-row"><span class="stat-label">Total impôts</span><span class="stat-value" id="ri_totImpDiv" style="color: #f44336;">28.500 €</span></div>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-card"><h4>GAIN NET</h4><div class="value" id="ri_gainNet">+6.487 €</div></div>
+          <div class="summary-card"><h4>ÉCONOMIE D'IMPÔTS</h4><div class="value" id="ri_economieImpots">16.387 €</div></div>
+          <div class="summary-card"><h4>GAIN EN %</h4><div class="value" id="ri_gainPourcent">+20,6%</div></div>
+        </div>
+        <div class="highlight-box">
+          <h3>💡 Pourquoi ça marche ?</h3>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong id="ri_charges">38.400 €</strong> de charges déductibles réduisent la base imposable</li>
+            <li><strong>IS économisé : <span id="ri_ecoIS">9.600 €</span></strong> grâce aux charges</li>
+            <li><strong>Taxes dividendes économisées : <span id="ri_ecoTaxes">8.640 €</span></strong> (moins de dividendes à distribuer)</li>
+            <li><strong>Taxation favorable :</strong> 6,5% sur la plus-value vs 30% sur dividendes</li>
+          </ul>
+        </div>
+        <div class="info-banner">
+          <h3>💰 Coût d'extraction du cash (avec résultat identique)</h3>
+          <p style="line-height: 1.8;">
+            <strong>Avec <span id="ri_cout_resultat">60.000 €</span> de résultat :</strong><br /><br />
+            🎨 <strong>Art Leasing :</strong> Coût d'extraction = <span id="ri_cout_AL">50.613 €</span> pour obtenir <span id="ri_cout_netAL">37.987 €</span> nets<br />→ Ratio : <span id="ri_cout_ratioAL">1,33 €</span> de coût par euro net sorti<br /><br />
+            💰 <strong>Dividendes :</strong> Coût d'extraction = <span id="ri_cout_Div">28.500 €</span> pour obtenir <span id="ri_cout_netDiv">31.500 €</span> nets<br />→ Ratio : <span id="ri_cout_ratioDiv">0,90 €</span> de coût par euro net sorti<br /><br />
+            <strong>📊 Conclusion :</strong> L'Art Leasing coûte plus cher par euro extrait, MAIS permet de sortir <strong style="color: #4CAF50;"><span id="ri_cout_diff">+6.487 €</span> de plus</strong> avec le même résultat !
+          </p>
+        </div>
+      </div>
+
+      <!-- TAB 3: Art Leasing -->
+      <div class="tab-content">
+        <h2 style="text-align: center; margin-bottom: 30px;">🎨 Scénario Art Leasing Détaillé</h2>
+        <div class="flow-diagram">
+          <div class="flow-step">
+            <div class="flow-icon">1</div>
+            <div class="flow-content"><h4>Résultat de la société (2 ans)</h4><div class="flow-amount positive" id="al_resultat">60.000 €</div></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step" style="background: #e8f5e9;">
+            <div class="flow-icon" style="background: #4CAF50;">💡</div>
+            <div class="flow-content">
+              <h4 id="al_chargesTitle">Charges de leasing - DÉDUCTIBLES</h4>
+              <div class="flow-amount negative" id="al_charges">- 38.400 €</div>
+              <p style="color: #2e7d32; margin-top: 5px; font-weight: bold;" id="al_chargesDetail">✓ Déduction fiscale majeure !</p>
+              <p style="color: #666; margin-top: 5px;" id="al_resultatImposable">Résultat imposable : 21.600 €</p>
+            </div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-icon">2</div>
+            <div class="flow-content"><h4>Impôt sur les Sociétés (25%)</h4><div class="flow-amount negative" id="al_is">- 5.400 €</div><p style="color: #666; margin-top: 5px;" id="al_resultatNet">Résultat net : 16.200 €</p></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-icon">3</div>
+            <div class="flow-content"><h4>Taxe sur dividendes (30%)</h4><div class="flow-amount negative" id="al_taxeDividendes">- 4.860 €</div><p style="color: #666; margin-top: 5px;" id="al_dividendesNets">Dividendes nets : 11.340 €</p></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step" style="background: #fff3cd; border: 2px solid #ffc107;">
+            <div class="flow-icon" style="background: #ffc107;">🎨</div>
+            <div class="flow-content">
+              <h4>FIN DE CONTRAT - Rachat et revente de l'œuvre</h4>
+              <div style="margin: 15px 0;" id="al_reventeDetail"></div>
+            </div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); border: 3px solid #4CAF50;">
+            <div class="flow-icon" style="background: #4CAF50;">✓</div>
+            <div class="flow-content"><h4>NET TOTAL DANS LA POCHE DU DIRIGEANT</h4><div class="flow-amount positive" style="font-size: 2em;" id="al_netTotal">37.987 €</div><p style="color: #666; margin-top: 5px;" id="al_netDetail">11.340 € (dividendes) + 26.647 € (revente)</p><p style="color: #2e7d32; margin-top: 10px; font-weight: bold;" id="al_tauxPonction">Taux de ponction global : 20,2%</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: Dividendes -->
+      <div class="tab-content">
+        <h2 style="text-align: center; margin-bottom: 30px;">💼 Scénario Dividendes Équivalents</h2>
+        <div class="warning-box"><h3>🎯 Objectif</h3><p style="font-size: 1.2em;">Obtenir <strong><span id="div_objectif">37.987 €</span> nets</strong> (= montant avec Art Leasing)</p></div>
+        <div class="flow-diagram">
+          <div class="flow-step" style="background: #ffebee; border: 2px solid #f44336;">
+            <div class="flow-icon" style="background: #f44336;">?</div>
+            <div class="flow-content"><h4>Résultat nécessaire</h4><div class="flow-amount" style="color: #f44336; font-size: 2.5em;" id="div_resultatNecessaire">90.300 €</div><p style="color: #666; margin-top: 10px;">Résultat brut sur 2 ans</p></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-icon">1</div>
+            <div class="flow-content"><h4>Impôt sur les Sociétés (25%)</h4><div class="flow-amount negative" id="div_is">- 22.575 €</div><p style="color: #666; margin-top: 5px;" id="div_resultatNet">Résultat net : 67.725 €</p></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="flow-step" id="div_flatTaxStep">
+            <div class="flow-icon">2</div>
+            <div class="flow-content"><h4><span id="div_flatTaxLabel">Taxe unique sur dividendes (30%)</span></h4><div class="flow-amount negative" id="div_taxeDividendes">- 20.318 €</div></div>
+          </div>
+          <div class="arrow" id="div_arrow2">↓</div>
+          <div class="flow-step" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border: 3px solid #667eea;">
+            <div class="flow-icon" style="background: #667eea;">✓</div>
+            <div class="flow-content"><h4><span id="div_finalLabel">NET DANS LA POCHE</span></h4><div class="flow-amount" style="font-size: 2em;" id="div_netFinal">37.987 €</div><p style="color: #666; margin-top: 10px;" id="div_tauxPonction">Taux de ponction : 47,5%</p></div>
+          </div>
+        </div>
+        <div class="warning-box"><h3>⚠️ Conclusion</h3><p style="font-size: 1.2em; line-height: 1.8;">• <strong style="color: #4CAF50;">Art Leasing :</strong> <span id="div_comp1">60.000 €</span> de résultat suffisent<br />• <strong style="color: #f44336;">Dividendes :</strong> <span id="div_comp2">90.300 €</span> de résultat nécessaires<br /><br /><strong style="color: #4CAF50; font-size: 1.3em;">➜ Économie : <span id="div_eco">30.300 €</span> (<span id="div_pourcent">-33,6%</span>)</strong></p></div>
+      </div>
+
+      <!-- TAB 5: Graphiques -->
+      <div class="tab-content">
+        <h2 style="text-align: center; margin-bottom: 30px;">📈 Analyses Graphiques</h2>
+        <div class="chart-container"><canvas id="resultatChart"></canvas></div>
+        <div class="chart-container"><canvas id="netChart"></canvas></div>
+        <div class="chart-container"><canvas id="efficaciteChart"></canvas></div>
+        <div class="chart-container"><canvas id="coutChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helpers DOM + format
+    function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+    function setHTML(id, value) { const el = document.getElementById(id); if (el) el.innerHTML = value; }
+    function fmtEUR(value, frac = 0) { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: frac }).format(value); }
+
+    let calculations = {};
+    function nonNeg(v){ return isFinite(v) ? Math.max(0, v) : 0; }
+
+    function updateCalculations() {
+      const resultatAnnuel = parseFloat(document.getElementById('resultatAnnuel').value) || 30000;
+      const valeurOeuvre = parseFloat(document.getElementById('valeurOeuvre').value) || 30000;
+      const tauxIS = (parseFloat(document.getElementById('tauxIS').value) || 25) / 100;
+      const tauxDividendes = (parseFloat(document.getElementById('tauxDividendes').value) || 30) / 100;
+      const dureeMois = parseInt(document.getElementById('dureeMois').value) || 24;
+      const apportInitial = parseFloat(document.getElementById('apportInitial').value) || 0;
+      const loyerMensuel = parseFloat(document.getElementById('loyerMensuel').value) || 1600;
+      const distribuerSurplus = document.getElementById('distribuerSurplus').checked;
+
+      const resultatTotal = nonNeg(resultatAnnuel * 2);
+      const loyersTotal = nonNeg(loyerMensuel * dureeMois);
+      const chargesLeasingTotal = nonNeg(loyersTotal + apportInitial);
+
+      // --- ART LEASING ---
+      const art_resultatImposable = resultatTotal - chargesLeasingTotal;
+      const baseIS = nonNeg(art_resultatImposable);
+      const art_is = Math.round(baseIS * tauxIS);
+      const art_resultatNet = art_resultatImposable - art_is;
+      const baseDiv = nonNeg(art_resultatNet);
+      const art_taxeDividendes = Math.round(baseDiv * tauxDividendes);
+      const art_dividendesNets = baseDiv - art_taxeDividendes;
+
+      const art_rachat = Math.round(valeurOeuvre * 0.05);
+      const art_revente = valeurOeuvre;
+      const art_plusValue = Math.max(0, art_revente - art_rachat);
+      const art_taxePlusValue = Math.round(art_plusValue * 0.065);
+      const art_produitRevente = art_revente - art_rachat - art_taxePlusValue;
+
+      const art_netTotal = art_dividendesNets + art_produitRevente;
+      const art_totalImpots = nonNeg(art_is) + nonNeg(art_taxeDividendes) + nonNeg(art_taxePlusValue);
+      const art_tauxPonction = ((art_totalImpots / Math.max(1, resultatTotal)) * 100).toFixed(1);
+
+      // --- COMPARAISON 1: Résultat nécessaire en dividendes pour obtenir art_netTotal ---
+      const denom = (1 - tauxIS) * (1 - tauxDividendes);
+      const div_resultatNecessaire = Math.round(art_netTotal / Math.max(0.0001, denom));
+      const div_is = Math.round(div_resultatNecessaire * tauxIS);
+      const div_resultatNet = div_resultatNecessaire - div_is;
+      const div_taxeDividendes = Math.round(div_resultatNet * tauxDividendes);
+      let div_netPoche = div_resultatNet - div_taxeDividendes;
+      let div_totalImpots = div_is + div_taxeDividendes;
+      
+      // Calcul du surplus
+      const surplus = Math.max(0, resultatTotal - div_resultatNecessaire);
+      let surplus_enReserve = 0;
+      let surplus_distribue = 0;
+      let surplus_flatTax = 0;
+      
+      if (surplus > 0) {
+        const surplus_is = Math.round(surplus * tauxIS);
+        const surplus_netApresIS = surplus - surplus_is;
+        
+        if (distribuerSurplus) {
+          // On distribue le surplus en dividendes
+          surplus_flatTax = Math.round(surplus_netApresIS * tauxDividendes);
+          surplus_distribue = surplus_netApresIS - surplus_flatTax;
+          div_netPoche += surplus_distribue;
+          div_totalImpots += surplus_is + surplus_flatTax;
+        } else {
+          // On garde le surplus en réserve
+          surplus_enReserve = surplus_netApresIS;
+          div_totalImpots += surplus_is;
+        }
+      }
+      
+      const div_tauxPonction = ((div_totalImpots / Math.max(1, div_resultatNecessaire)) * 100).toFixed(1);
+
+      const economieResultat = div_resultatNecessaire - resultatTotal;
+      const pourcentageEconomie = ((economieResultat / Math.max(1, div_resultatNecessaire)) * 100).toFixed(1);
+      const economieImpots = div_totalImpots - art_totalImpots;
+
+      // --- COMPARAISON 2: Dividendes classiques avec resultatTotal identique ---
+      const div2_is = Math.round(resultatTotal * tauxIS);
+      const div2_resultatNet = resultatTotal - div2_is;
+      const div2_taxeDividendes = Math.round(div2_resultatNet * tauxDividendes);
+      const div2_netPoche = div2_resultatNet - div2_taxeDividendes;
+      const div2_totalImpots = div2_is + div2_taxeDividendes;
+
+      const gainNet = art_netTotal - div2_netPoche;
+      const gainPourcent = ((gainNet / Math.max(1, div2_netPoche)) * 100).toFixed(1);
+      const economieImpots2 = div2_totalImpots - art_totalImpots;
+
+      // --- COÛT RÉEL (vision “coût d’extraction” sur l’objectif de valeur de l’œuvre) ---
+      const valeur_extraite = art_produitRevente;
+      const surcout_financement = (loyersTotal + apportInitial) - valeurOeuvre;
+      const extract2_coutAL = nonNeg(surcout_financement) + nonNeg(art_rachat) + nonNeg(art_taxePlusValue);
+      const extract2_ratioAL = ((extract2_coutAL / Math.max(1, valeur_extraite)) * 100).toFixed(1);
+
+      const denom2 = (1 - tauxIS) * (1 - tauxDividendes);
+      const extract2_resultatDiv = Math.round(valeur_extraite / Math.max(0.0001, denom2));
+      const extract2_isDiv = Math.round(extract2_resultatDiv * tauxIS);
+      const extract2_resultatNetDiv = extract2_resultatDiv - extract2_isDiv;
+      const extract2_flatTaxDiv = Math.round(extract2_resultatNetDiv * tauxDividendes);
+      const extract2_coutDiv = extract2_isDiv + extract2_flatTaxDiv;
+      const extract2_ratioDiv = ((extract2_coutDiv / Math.max(1, valeur_extraite)) * 100).toFixed(1);
+      const extract2_fois = (parseFloat(extract2_ratioDiv) / Math.max(0.0001, parseFloat(extract2_ratioAL))).toFixed(1);
+      const extract2_economieParEuro = ((parseFloat(extract2_ratioDiv) - parseFloat(extract2_ratioAL)) / 100).toFixed(2);
+
+      calculations = {
+        resultatAnnuel, valeurOeuvre, tauxIS, tauxDividendes, dureeMois, apportInitial, loyerMensuel, distribuerSurplus,
+        resultatTotal, loyersTotal, chargesLeasingTotal,
+        art_resultatImposable, art_is, art_resultatNet, art_taxeDividendes, art_dividendesNets,
+        art_rachat, art_revente, art_taxePlusValue, art_produitRevente, art_netTotal, art_totalImpots, art_tauxPonction,
+        div_resultatNecessaire, div_is, div_resultatNet, div_taxeDividendes, div_netPoche, div_totalImpots, div_tauxPonction,
+        surplus, surplus_enReserve, surplus_distribue, surplus_flatTax,
+        div2_is, div2_resultatNet, div2_taxeDividendes, div2_netPoche, div2_totalImpots,
+        economieResultat, pourcentageEconomie, economieImpots, gainNet, gainPourcent, economieImpots2,
+        valeur_extraite, surcout_financement,
+        extract2_coutAL, extract2_ratioAL, extract2_resultatDiv, extract2_isDiv, extract2_flatTaxDiv, extract2_coutDiv, extract2_ratioDiv, extract2_fois, extract2_economieParEuro
+      };
+
+      updateDisplay();
+    }
+
+    function updateDisplay(){
+      const c = calculations;
+
+      // Info charges
+      if (c.apportInitial > 0) {
+        setText('chargesInfo', `✅ Charges totales : ${fmtEUR(c.chargesLeasingTotal)} (${fmtEUR(c.loyersTotal)} loyers + ${fmtEUR(c.apportInitial)} apport)`);
+      } else {
+        setText('chargesInfo', `Charges de leasing : ${fmtEUR(c.loyersTotal)} sur ${c.dureeMois} mois`);
+      }
+
+      // Vue 1
+      setText('vue1_objectif', fmtEUR(c.art_netTotal));
+      setText('vue1_resultatAL', fmtEUR(c.resultatTotal));
+      setText('vue1_netAL', fmtEUR(c.art_netTotal));
+      setText('vue1_resultatDiv', fmtEUR(c.div_resultatNecessaire));
+      setText('vue1_netDiv', fmtEUR(c.div_netPoche));
+      setText('vue1_economie', fmtEUR(c.economieResultat));
+      setText('vue1_pourcent', `-${c.pourcentageEconomie}%`);
+      
+      // Affichage du surplus
+      const surplusInfo = document.getElementById('surplus_info');
+      const noSurplusInfo = document.getElementById('no_surplus_info');
+      
+      if (c.surplus > 0) {
+        surplusInfo.style.display = 'block';
+        noSurplusInfo.style.display = 'none';
+        setText('surplus_resultatReel', fmtEUR(c.resultatTotal));
+        setText('surplus_resultatNecessaire', fmtEUR(c.div_resultatNecessaire));
+        setText('surplus_montant', fmtEUR(c.surplus));
+        
+        if (c.distribuerSurplus) {
+          setHTML('surplus_text', `
+            ✅ <strong style="color: #4CAF50;">Surplus distribué en dividendes :</strong><br />
+            • IS sur le surplus : <strong style="color: #f44336;">${fmtEUR(Math.round(c.surplus * c.tauxIS))}</strong><br />
+            • Flat tax sur le surplus : <strong style="color: #f44336;">${fmtEUR(c.surplus_flatTax)}</strong><br />
+            • Montant distribué net : <strong style="color: #4CAF50; font-size: 1.2em;">${fmtEUR(c.surplus_distribue)}</strong><br /><br />
+            <div style="padding: 10px; background: #e8f5e9; border-radius: 5px; border-left: 4px solid #4CAF50;">
+              <strong>💰 Total net dans votre poche : ${fmtEUR(c.div_netPoche)}</strong><br />
+              <small>(Objectif : ${fmtEUR(c.div_netPoche - c.surplus_distribue)} + Surplus : ${fmtEUR(c.surplus_distribue)})</small>
+            </div>
+          `);
+        } else {
+          setHTML('surplus_text', `
+            🏦 <strong style="color: #2196F3;">Surplus gardé en réserve dans la société :</strong><br />
+            • IS sur le surplus : <strong style="color: #f44336;">${fmtEUR(Math.round(c.surplus * c.tauxIS))}</strong><br />
+            • Montant en réserve (après IS) : <strong style="color: #2196F3; font-size: 1.2em;">${fmtEUR(c.surplus_enReserve)}</strong><br />
+            • Ce montant reste disponible dans la société<br /><br />
+            <div style="padding: 10px; background: #e3f2fd; border-radius: 5px; border-left: 4px solid #2196F3;">
+              <strong>💰 Net dans votre poche : ${fmtEUR(c.div_netPoche)}</strong><br />
+              <strong>🏦 En réserve société : ${fmtEUR(c.surplus_enReserve)}</strong><br />
+              <strong style="color: #2196F3;">📊 Total disponible : ${fmtEUR(c.div_netPoche + c.surplus_enReserve)}</strong>
+            </div>
+          `);
+        }
+      } else {
+        surplusInfo.style.display = 'none';
+        noSurplusInfo.style.display = 'block';
+        setText('no_surplus_resultatReel', fmtEUR(c.resultatTotal));
+        setText('no_surplus_resultatNecessaire', fmtEUR(c.div_resultatNecessaire));
+        setText('no_surplus_minimum', fmtEUR(Math.ceil(c.div_resultatNecessaire / 2)));
+      }
+      
+      // Mise à jour des labels selon l'option garder en réserve (supprimé car on n'utilise plus cette option globalement)
+      setText('vue1_divLabel', '💰 Dividendes');
+      setText('vue1_divStatus', 'Pour obtenir nets');
+      setText('vue2_divLabel', '💰 Dividendes');
+      setText('vue2_divStatus', 'Net dans la poche');
+
+      // Vue 2
+      setText('vue2_resultat', fmtEUR(c.resultatTotal));
+      setText('vue2_netAL', fmtEUR(c.art_netTotal));
+      setText('vue2_resultatAL', fmtEUR(c.resultatTotal));
+      setText('vue2_netDiv', fmtEUR(c.div2_netPoche));
+      setText('vue2_resultatDiv', fmtEUR(c.resultatTotal));
+      setText('vue2_gain', fmtEUR(c.gainNet));
+      setText('vue2_pourcent', `+${c.gainPourcent}%`);
+
+      // Synthèse tableau
+      setText('synth_net', fmtEUR(c.art_netTotal));
+      setText('synth_res1AL', fmtEUR(c.resultatTotal));
+      setText('synth_res1Div', fmtEUR(c.div_resultatNecessaire));
+      setText('synth_eco1', fmtEUR(-c.economieResultat));
+      setText('synth_res', fmtEUR(c.resultatTotal));
+      setText('synth_net2AL', fmtEUR(c.art_netTotal));
+      setText('synth_net2Div', fmtEUR(c.div2_netPoche));
+      setText('synth_gain2', fmtEUR(c.gainNet));
+
+      // Section Extraction
+      setText('valeur_cible', fmtEUR(c.valeur_extraite));
+      setText('extract2_valeurAL', fmtEUR(c.valeur_extraite));
+      setText('extract2_surcout', fmtEUR(c.surcout_financement));
+      setText('extract2_surcoutDetail', `(${fmtEUR(c.loyersTotal)} loyers + ${fmtEUR(c.apportInitial)} apport) - ${fmtEUR(c.valeurOeuvre)} valeur = ${fmtEUR(c.surcout_financement)}`);
+      setText('extract2_rachat', fmtEUR(c.art_rachat));
+      setText('extract2_taxePV', fmtEUR(c.art_taxePlusValue));
+      setText('extract2_coutTotalAL', fmtEUR(c.extract2_coutAL));
+      setText('extract2_ratioAL', c.extract2_ratioAL + '%');
+
+      setText('extract2_valeurDiv', fmtEUR(c.valeur_extraite));
+      setText('extract2_resultatDiv', fmtEUR(c.extract2_resultatDiv));
+      setText('extract2_isDiv', fmtEUR(c.extract2_isDiv));
+      setText('extract2_flatTax', fmtEUR(c.extract2_flatTaxDiv));
+      setText('extract2_coutTotalDiv', fmtEUR(c.extract2_coutDiv));
+      setText('extract2_ratioDiv', c.extract2_ratioDiv + '%');
+      setText('extract2_objectif', fmtEUR(c.valeur_extraite));
+      setText('tab_res_al', fmtEUR(c.resultatTotal));
+      setText('tab_res_div', fmtEUR(c.extract2_resultatDiv));
+      setText('tab_cout_al', fmtEUR(c.extract2_coutAL));
+      setText('tab_cout_div', fmtEUR(c.extract2_coutDiv));
+      setText('tab_val_al', fmtEUR(c.valeur_extraite));
+      setText('tab_val_div', fmtEUR(c.valeur_extraite));
+      setHTML('tab_ratio_al', `<strong style="color: #4CAF50;">${c.extract2_ratioAL}%</strong>`);
+      setHTML('tab_ratio_div', `<strong style="color: #f44336;">${c.extract2_ratioDiv}%</strong>`);
+      setText('info_surcout', fmtEUR(c.surcout_financement));
+      setText('info_economie', c.extract2_economieParEuro + ' €');
+      
+      // Mise à jour des textes dynamiques pour les pourcentages
+      setText('extract2_ratioTextAL', c.extract2_ratioAL + '%');
+      setText('extract2_ratioTextDiv', c.extract2_ratioDiv + '%');
+      setText('extract2_summaryAL', Math.round(parseFloat(c.extract2_ratioAL)) + '%');
+      setText('extract2_summaryDiv', Math.round(parseFloat(c.extract2_ratioDiv)) + '%');
+      setText('extract2_infoAL', Math.round(parseFloat(c.extract2_ratioAL)) + '%');
+      setText('extract2_infoDiv', Math.round(parseFloat(c.extract2_ratioDiv)) + '%');
+
+      // TAB 1
+      setText('rn_objectif', fmtEUR(c.art_netTotal));
+      setText('rn_resultatAL', fmtEUR(c.resultatTotal));
+      setText('rn_chargesAL', fmtEUR(-c.chargesLeasingTotal));
+      setText('rn_impotsAL', fmtEUR(-c.art_totalImpots));
+      setText('rn_netAL', fmtEUR(c.art_netTotal));
+      setText('rn_resultatDiv', fmtEUR(c.div_resultatNecessaire));
+      setText('rn_impotsDiv', fmtEUR(-c.div_totalImpots));
+      setText('rn_netDiv', fmtEUR(c.div_netPoche));
+      setText('rn_economieResultat', fmtEUR(c.economieResultat));
+      setText('rn_economieImpots', fmtEUR(c.economieImpots));
+      setText('rn_efficacite', `-${c.pourcentageEconomie}%`);
+      setText('rn_res1', fmtEUR(c.resultatTotal));
+      setText('rn_obj1', fmtEUR(c.art_netTotal));
+      setText('rn_res2', fmtEUR(c.div_resultatNecessaire));
+      setText('rn_eco', fmtEUR(c.economieResultat));
+
+      // TAB 2
+      setText('ri_resultat', fmtEUR(c.resultatTotal));
+      setText('ri_netAL', fmtEUR(c.art_netTotal));
+      setText('ri_resAL', fmtEUR(c.resultatTotal));
+      setText('ri_isAL', fmtEUR(-c.art_is));
+      setText('ri_taxesAL', fmtEUR(-(c.art_taxeDividendes + c.art_taxePlusValue)));
+      setText('ri_totImpAL', fmtEUR(c.art_totalImpots));
+      setText('ri_badge', `✨ GAIN : ${fmtEUR(c.gainNet)} (+${c.gainPourcent}%)`);
+      setText('ri_netDiv', fmtEUR(c.div2_netPoche));
+      setText('ri_resDiv', fmtEUR(c.resultatTotal));
+      setText('ri_isDiv', fmtEUR(-c.div2_is));
+      setText('ri_taxesDiv', fmtEUR(-c.div2_taxeDividendes));
+      setText('ri_totImpDiv', fmtEUR(c.div2_totalImpots));
+      setText('ri_gainNet', fmtEUR(c.gainNet));
+      setText('ri_economieImpots', fmtEUR(c.economieImpots2));
+      setText('ri_gainPourcent', `+${c.gainPourcent}%`);
+      setText('ri_charges', fmtEUR(c.chargesLeasingTotal));
+      setText('ri_ecoIS', fmtEUR(c.div2_is - c.art_is));
+      setText('ri_ecoTaxes', fmtEUR(c.div2_taxeDividendes - c.art_taxeDividendes));
+
+      // Coût d'extraction (résultat identique)
+      const ri_cout_AL = c.chargesLeasingTotal + c.art_rachat + c.art_taxePlusValue + c.art_is + c.art_taxeDividendes;
+      const ri_cout_ratioAL = (ri_cout_AL / Math.max(1, c.art_netTotal)).toFixed(2);
+      const ri_cout_ratioDiv = (c.div2_totalImpots / Math.max(1, c.div2_netPoche)).toFixed(2);
+      setText('ri_cout_resultat', fmtEUR(c.resultatTotal));
+      setText('ri_cout_AL', fmtEUR(ri_cout_AL));
+      setText('ri_cout_netAL', fmtEUR(c.art_netTotal));
+      setText('ri_cout_ratioAL', ri_cout_ratioAL + ' €');
+      setText('ri_cout_Div', fmtEUR(c.div2_totalImpots));
+      setText('ri_cout_netDiv', fmtEUR(c.div2_netPoche));
+      setText('ri_cout_ratioDiv', ri_cout_ratioDiv + ' €');
+      
+      // Calcul de la différence nette entre Art Leasing et Dividendes
+      const ri_cout_difference = c.art_netTotal - c.div2_netPoche;
+      setText('ri_cout_diff', (ri_cout_difference > 0 ? '+' : '') + fmtEUR(Math.abs(ri_cout_difference)));
+
+      // Revente détail
+      setHTML('al_reventeDetail', `
+        <div><strong>Rachat par le dirigeant (5%):</strong> <span style="color: #f44336; font-weight: bold;">-${fmtEUR(c.art_rachat)}</span></div>
+        <div><strong>Revente de l'œuvre:</strong> <span style="color: #4CAF50; font-weight: bold;">+ ${fmtEUR(c.art_revente)}</span></div>
+        <div><strong>Taxe plus-value (6,5%):</strong> <span style="color: #f44336; font-weight: bold;">-${fmtEUR(c.art_taxePlusValue)}</span></div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 2px solid #333;">
+            <strong>Produit net de la revente:</strong> <span style="color: #4CAF50; font-weight: bold; font-size: 1.3em;">+ ${fmtEUR(c.art_produitRevente)}</span>
+        </div>
+      `);
+
+      setText('al_resultat', fmtEUR(c.resultatTotal));
+      setText('al_charges', '- ' + fmtEUR(c.chargesLeasingTotal));
+      setText('al_resultatImposable', `Résultat imposable : ${fmtEUR(c.art_resultatImposable)}`);
+      setText('al_is', '- ' + fmtEUR(c.art_is));
+      setText('al_resultatNet', `Résultat net : ${fmtEUR(c.art_resultatNet)}`);
+      setText('al_taxeDividendes', '- ' + fmtEUR(c.art_taxeDividendes));
+      setText('al_dividendesNets', `Dividendes nets : ${fmtEUR(c.art_dividendesNets)}`);
+      setText('al_netTotal', fmtEUR(c.art_netTotal));
+      setText('al_netDetail', `${fmtEUR(c.art_dividendesNets)} (dividendes) + ${fmtEUR(c.art_produitRevente)} (revente)`);
+      setText('al_tauxPonction', `Taux de ponction global : ${c.art_tauxPonction}%`);
+
+      // TAB 4: Dividendes Équivalents
+      setText('div_objectif', fmtEUR(c.art_netTotal));
+      setText('div_resultatNecessaire', fmtEUR(c.div_resultatNecessaire));
+      setText('div_is', fmtEUR(-c.div_is));
+      setText('div_resultatNet', `Résultat net : ${fmtEUR(c.div_resultatNet)}`);
+      setText('div_taxeDividendes', fmtEUR(-c.div_taxeDividendes));
+      setText('div_netFinal', fmtEUR(c.div_netPoche));
+      setText('div_tauxPonction', `Taux de ponction : ${c.div_tauxPonction}%`);
+      setText('div_comp1', fmtEUR(c.resultatTotal));
+      setText('div_comp2', fmtEUR(c.div_resultatNecessaire));
+      setText('div_eco', fmtEUR(c.economieResultat));
+      setText('div_pourcent', `-${c.pourcentageEconomie}%`);
+      
+      // Affichage standard - toujours avec flat tax
+      const flatTaxStep = document.getElementById('div_flatTaxStep');
+      const arrow2 = document.getElementById('div_arrow2');
+      if (flatTaxStep) flatTaxStep.style.display = 'block';
+      if (arrow2) arrow2.style.display = 'block';
+      setText('div_finalLabel', 'NET DANS LA POCHE');
+      setText('div_flatTaxLabel', `Taxe unique sur dividendes (${Math.round(c.tauxDividendes * 100)}%)`);
+
+      // Graphs si onglet actif
+      const activeTab = document.querySelector('.tab.active');
+      if (activeTab && activeTab.textContent.includes('Graphiques')) {
+        initCharts();
+      }
+    }
+
+    function resetDefaults() {
+      document.getElementById('resultatAnnuel').value = 30000;
+      document.getElementById('valeurOeuvre').value = 30000;
+      document.getElementById('loyerMensuel').value = 1600;
+      document.getElementById('tauxIS').value = 25;
+      document.getElementById('tauxDividendes').value = 30;
+      document.getElementById('dureeMois').value = 24;
+      document.getElementById('apportInitial').value = 0;
+      document.getElementById('distribuerSurplus').checked = false;
+      updateCalculations();
+    }
+
+    function downloadPDF() {
+      const originalTitle = document.title;
+      document.title = 'Rapport Art Leasing - ' + (calculations && calculations.valeurOeuvre ? fmtEUR(calculations.valeurOeuvre) : '');
+      // Afficher tout pour impression
+      const contents = document.querySelectorAll('.tab-content');
+      contents.forEach(c => c.style.display = 'block');
+      window.print();
+      // Restore
+      setTimeout(() => {
+        document.title = originalTitle;
+        showTab(0);
+      }, 100);
+    }
+
+    function showTab(index) {
+      const tabs = document.querySelectorAll('.tab');
+      const contents = document.querySelectorAll('.tab-content');
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      tabs[index].classList.add('active');
+      contents[index].classList.add('active');
+      if (index === 5) { setTimeout(initCharts, 80); }
+    }
+
+    function initCharts(){
+      const c = calculations || {};
+      // Graph 1: Résultat nécessaire
+      const ctx1 = document.getElementById('resultatChart');
+      if (ctx1 && ctx1.chart) ctx1.chart.destroy();
+      if (ctx1) {
+        ctx1.chart = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: ['Art Leasing', 'Dividendes'],
+            datasets: [{
+              label: 'Résultat nécessaire (€)',
+              data: [c.resultatTotal || 0, c.div_resultatNecessaire || 0],
+              backgroundColor: ['#4CAF50', '#f44336'],
+              borderColor: ['#45a049', '#d32f2f'],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { title: { display: true, text: `Résultat nécessaire pour ${fmtEUR(c.art_netTotal || 0)}`, font: { size: 18 } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + ' €' } } }
+          }
+        });
+      }
+
+      // Graph 2: Net obtenu
+      const ctx2 = document.getElementById('netChart');
+      if (ctx2 && ctx2.chart) ctx2.chart.destroy();
+      if (ctx2) {
+        ctx2.chart = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: ['Art Leasing', 'Dividendes'],
+            datasets: [{
+              label: 'Net dans la poche (€)',
+              data: [c.art_netTotal || 0, c.div2_netPoche || 0],
+              backgroundColor: ['#4CAF50', '#667eea'],
+              borderColor: ['#45a049', '#5568d3'],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { title: { display: true, text: `Net obtenu avec ${fmtEUR(c.resultatTotal || 0)} de résultat`, font: { size: 18 } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + ' €' } } }
+          }
+        });
+      }
+
+      // Graph 3: Vision complète
+      const ctx3 = document.getElementById('efficaciteChart');
+      if (ctx3 && ctx3.chart) ctx3.chart.destroy();
+      if (ctx3) {
+        ctx3.chart = new Chart(ctx3, {
+          type: 'bar',
+          data: {
+            labels: ['Résultat AL', 'Net AL', 'Résultat Div (équiv.)', 'Net Div (même résultat)'],
+            datasets: [{
+              label: 'Montants (€)',
+              data: [c.resultatTotal || 0, c.art_netTotal || 0, c.div_resultatNecessaire || 0, c.div2_netPoche || 0],
+              backgroundColor: ['#4CAF50', '#84fab0', '#f44336', '#667eea'],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { title: { display: true, text: 'Vision complète des deux comparaisons', font: { size: 18 } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + ' €' } } }
+          }
+        });
+      }
+
+      // Graph 4: Coût d'extraction
+      const ctx4 = document.getElementById('coutChart');
+      if (ctx4 && ctx4.chart) ctx4.chart.destroy();
+      if (ctx4) {
+        ctx4.chart = new Chart(ctx4, {
+          type: 'bar',
+          data: {
+            labels: ['Art Leasing', 'Dividendes'],
+            datasets: [{
+              label: 'Coût total extraction (€)',
+              data: [c.extract2_coutAL || 0, c.extract2_coutDiv || 0],
+              backgroundColor: ['rgba(255, 152, 0, 0.7)', 'rgba(244, 67, 54, 0.7)'],
+              borderColor: ['#ff9800', '#f44336'],
+              borderWidth: 2
+            }, {
+              label: 'Valeur nette extraite (€)',
+              data: [c.valeur_extraite || 0, c.valeur_extraite || 0],
+              backgroundColor: ['rgba(76, 175, 80, 0.7)', 'rgba(76, 175, 80, 0.7)'],
+              borderColor: ['#4CAF50', '#4CAF50'],
+              borderWidth: 2
+            }, {
+              label: 'Résultat nécessaire (€)',
+              data: [c.resultatTotal || 0, c.extract2_resultatDiv || 0],
+              backgroundColor: ['rgba(33, 150, 243, 0.7)', 'rgba(156, 39, 176, 0.7)'],
+              borderColor: ['#2196F3', '#9c27b0'],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { title: { display: true, text: `Extraction de ${fmtEUR(c.valeur_extraite || 0)} : Coût vs Résultat nécessaire`, font: { size: 18 } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + ' €' } } }
+          }
+        });
+      }
+    }
+
+    window.onload = function() {
+      resetDefaults(); // sets defaults and calls updateCalculations
+    };
+  </script>
+</body>
+</html>
